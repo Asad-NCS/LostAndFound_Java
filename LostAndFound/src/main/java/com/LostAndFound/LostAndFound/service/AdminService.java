@@ -4,7 +4,6 @@ import com.LostAndFound.LostAndFound.dto.AdminDTO;
 import com.LostAndFound.LostAndFound.model.Admin;
 import com.LostAndFound.LostAndFound.repository.AdminRepository;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service

@@ -8,7 +8,7 @@ export default function TestScreen() {
   const [error, setError] = useState(null);
 
   useEffect(() => {
-    axios.get('http://10.7.246.74:8080/api/user/5')
+    axios.get('http://10.7.246.74:8080/api/users/login')
       .then(response => {
         console.log('API Response:', response); // Log the full response for debugging
         setData(response.data);

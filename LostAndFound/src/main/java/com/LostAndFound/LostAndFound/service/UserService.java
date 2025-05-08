@@ -19,6 +19,7 @@ public class UserService {
         User user = new User();
         user.setUsername(userDTO.getUsername());
         user.setEmail(userDTO.getEmail());
+        user.setPassword(userDTO.getPassword()); // set raw password
         return toDTO(userRepository.save(user));
     }
 
@@ -37,6 +38,7 @@ public class UserService {
                 .orElseThrow(() -> new RuntimeException("User not found"));
         user.setUsername(userDTO.getUsername());
         user.setEmail(userDTO.getEmail());
+        user.setPassword(userDTO.getPassword()); // update password
         return toDTO(userRepository.save(user));
     }
 
@@ -49,6 +51,15 @@ public class UserService {
         dto.setId(user.getId());
         dto.setUsername(user.getUsername());
         dto.setEmail(user.getEmail());
+        dto.setPassword(user.getPassword()); // return raw password (for demo/testing)
         return dto;
     }
+    public UserDTO loginUser(String email, String password) {
+        User user = userRepository.findByEmail(email);
+        if (user == null || !user.getPassword().equals(password)) {
+            throw new RuntimeException("Invalid email or password");
+        }
+        return toDTO(user);
+    }
+
 }
