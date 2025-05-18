@@ -1,37 +1,21 @@
 package com.LostAndFound.LostAndFound.config;
 
 import com.LostAndFound.LostAndFound.storage.FileStorageService;
+import com.LostAndFound.LostAndFound.storage.FileSystemStorageService;
+import com.LostAndFound.LostAndFound.storage.StorageProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.io.Resource;
-import org.springframework.web.multipart.MultipartFile;
 
 @Configuration
 public class FileStorageConfig {
 
+    // The StorageProperties bean (annotated with @Component and @ConfigurationProperties)
+    // will be automatically created by Spring.
+    // We can then inject it here if FileSystemStorageService's constructor requires it.
+
     @Bean
-    public FileStorageService fileStorageService() {
-        return new FileStorageService() {
-            @Override
-            public String store(MultipartFile file) {
-                return "";
-            }
-
-            @Override
-            public Resource load(String filename) {
-                return null;
-            }
-
-            @Override
-            public void delete(String filename) {
-
-            }
-
-            @Override
-            public Resource loadFileAsResource(String imagePath) {
-                return null;
-            }
-        };
+    public FileStorageService fileStorageService(StorageProperties properties) {
+        // Pass the properties to the constructor of your actual service implementation
+        return new FileSystemStorageService(properties);
     }
 }
-

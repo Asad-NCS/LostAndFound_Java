@@ -2,23 +2,19 @@ package com.LostAndFound.LostAndFound.storage;
 
 import lombok.Getter;
 import lombok.Setter;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.boot.context.properties.ConfigurationProperties;
-import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.stereotype.Component; // Or @Configuration
 
 @Getter
 @Setter
+@Component // Or @Configuration - makes it a Spring bean and eligible for @ConfigurationProperties
 @ConfigurationProperties("storage")
-@SpringBootApplication
-@EnableConfigurationProperties(StorageProperties.class)
 public class StorageProperties {
-    private String location = "uploads"; // Default folder
 
-    public String getLocation() {
-        return location;
-    }
+    /**
+     * Folder location for storing files.
+     */
+    private String location = "uploads"; // Default upload directory relative to project root
 
-    public void setLocation(String location) {
-        this.location = location;
-    }
+    // Lombok will generate getters and setters
 }

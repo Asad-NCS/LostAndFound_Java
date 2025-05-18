@@ -1,32 +1,42 @@
 package com.LostAndFound.LostAndFound.controller;
 
 import com.LostAndFound.LostAndFound.dto.VerificationDTO;
+import com.LostAndFound.LostAndFound.dto.VerificationRequest;
+import com.LostAndFound.LostAndFound.dto.VerificationSubmit;
 import com.LostAndFound.LostAndFound.service.VerificationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-@CrossOrigin(origins = "*")
 
+@CrossOrigin(origins = "*")
 @RestController
-@RequestMapping("/api/verifications")
+@RequestMapping("/api/verification")
 @RequiredArgsConstructor
 public class VerificationController {
 
     private final VerificationService verificationService;
 
-    @PostMapping
-    public ResponseEntity<VerificationDTO> createVerification(@RequestBody VerificationDTO verificationDTO) {
-        return ResponseEntity.ok(verificationService.createVerification(verificationDTO));
+    @PostMapping("/request")
+    public ResponseEntity<VerificationDTO> requestVerification(
+            @RequestBody VerificationRequest request) {
+        return ResponseEntity.ok(verificationService.requestVerification(
+                request.getClaimId(),
+                request.getUserId()
+        ));
     }
 
-    @GetMapping("/{id}")
-    public ResponseEntity<VerificationDTO> getVerification(@PathVariable Long id) {
-        return ResponseEntity.ok(verificationService.getVerificationById(id));
+    @PostMapping("/verify")
+    public ResponseEntity<VerificationDTO> verifyClaim(
+            @RequestBody VerificationSubmit submit) {
+        return ResponseEntity.ok(verificationService.verifyClaim(
+                submit.getCode(),
+                submit.getClaimId()
+        ));
     }
 
-    @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteVerification(@PathVariable Long id) {
-        verificationService.deleteVerification(id);
-        return ResponseEntity.noContent().build();
+    @GetMapping("/claim/{claimId}")
+    public ResponseEntity<VerificationDTO> getVerificationByClaim(
+            @PathVariable Long claimId) {
+        return ResponseEntity.ok(verificationService.getVerificationByClaimId(claimId));
     }
 }
