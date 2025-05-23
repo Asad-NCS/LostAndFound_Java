@@ -19,7 +19,7 @@ import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
         menuItems.push({
           title: "Admin Claim Review",
           icon: "shield-check-outline",
-          action: () => navigation.navigate('AdminReviewScreen'), // Navigate to a new screen
+          action: () => navigation.navigate('AdminReviewScreen', { currentUser: user }), // Navigate to a new screen
           backgroundColor: colors.surfaceVariant, // A different color for admin
           iconColor: colors.onSurfaceVariant,
           description: "Review claims forwarded by finders."

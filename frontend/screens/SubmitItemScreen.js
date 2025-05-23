@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { Alert, Image, Platform, ScrollView, StyleSheet, View } from 'react-native';
 import { Button, IconButton, ActivityIndicator as PaperActivityIndicator, SegmentedButtons, Text, TextInput, useTheme } from 'react-native-paper';
 
-const API_BASE_URL = 'http://10.7.41.147:8080';
+const API_BASE_URL = 'http://10.7.41.239:8080';
 
 export default function SubmitItemScreen({ navigation, route }) {
   const initialType = route.params?.type || 'lost';

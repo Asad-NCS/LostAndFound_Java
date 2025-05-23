@@ -2,32 +2,32 @@ import { useFocusEffect } from '@react-navigation/native';
 import * as ImagePicker from 'expo-image-picker';
 import { useCallback, useEffect, useState } from 'react';
 import {
-    Alert,
-    Image,
-    Modal,
-    Platform,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View,
+  Alert,
+  Image,
+  Modal,
+  Platform,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import {
-    Button,
-    Card,
-    Chip,
-    Divider,
-    IconButton,
-    ActivityIndicator as PaperActivityIndicator,
-    Paragraph,
-    Text,
-    TextInput,
-    Title,
-    useTheme,
+  Button,
+  Card,
+  Chip,
+  Divider,
+  IconButton,
+  ActivityIndicator as PaperActivityIndicator,
+  Paragraph,
+  Text,
+  TextInput,
+  Title,
+  useTheme,
 } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
 // Ensure this IP is correct and your backend is running there
-const API_BASE_URL = 'http://10.7.42.96:8080'; // Replace with your actual backend IP if different
+const API_BASE_URL = 'http://10.7.41.239:8080'; // Replace with your actual backend IP if different
 
 export default function ItemDetailScreen({ route, navigation }) {
   const { item: initialItem, currentUser } = route.params;
@@ -102,7 +102,7 @@ export default function ItemDetailScreen({ route, navigation }) {
     } finally {
       setIsLoadingClaims(false);
     }
-  }, [item, currentUser, isLoadingClaims]);
+  }, [item, currentUser]);
 
   useEffect(() => {
     if (item && item.id && currentUser && currentUser.id) {

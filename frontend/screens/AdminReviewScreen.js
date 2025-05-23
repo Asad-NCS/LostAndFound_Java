@@ -1,5 +1,5 @@
 import { useFocusEffect } from '@react-navigation/native';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react'; // React import for completeness
 import { Alert, FlatList, Image, RefreshControl, StyleSheet, TouchableOpacity, View } from 'react-native';
 import {
     Button,
@@ -9,119 +9,146 @@ import {
     ActivityIndicator as PaperActivityIndicator,
     Paragraph,
     Text,
-    Title, // Correctly imported
+    Title,
     useTheme,
 } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
-const API_BASE_URL = 'http://10.7.41.147:8080'; // Ensure this is correct
+const API_BASE_URL = 'http://10.7.41.239:8080'; // <<< CORRECTED: Added http://
 
-export default function AdminReviewScreen({ route, navigation }) { // Ensure currentUser is a prop
-  console.log("[AdminReviewScreen] Received currentUser prop:", JSON.stringify(currentUser, null, 2));
-  // ...
-    const { currentUser } = route.params || {}; // Assuming currentUser (with role and id) is passed
+// AdminReviewScreen receives currentUser as a direct prop from App.js navigator
+export default function AdminReviewScreen({ navigation, route, currentUser }) { // <<< CORRECTED: currentUser is now a direct prop
     const { colors } = useTheme();
     const [claimsForReview, setClaimsForReview] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
     const [actionLoading, setActionLoading] = useState({ type: null, claimId: null });
 
+    // REMOVED: const { currentUser } = route.params || {}; 
+    // We use the currentUser passed as a direct prop.
+
+    useEffect(() => {
+        console.log("[AdminReviewScreen] Received currentUser prop in useEffect:", JSON.stringify(currentUser, null, 2));
+        if (!currentUser || !currentUser.id || currentUser.role !== 'admin') {
+            Alert.alert("Access Denied", "You do not have permission to view this page or user data is not fully loaded. Please log in as an admin.");
+            // if (navigation.canGoBack()) {
+            //     navigation.goBack();
+            // }
+        }
+    }, [currentUser, navigation]);
+
+
     const fetchAdminReviewClaims = useCallback(async () => {
-        console.log("[AdminReviewScreen] Fetching claims for admin review...");
+        if (!currentUser || currentUser.role !== 'admin' || !currentUser.id) {
+            console.log("[AdminReviewScreen] fetchAdminReviewClaims: Not an admin or currentUser is invalid/not yet available. Skipping fetch.");
+            setClaimsForReview([]); 
+            setIsLoading(false); 
+            return;
+        }
+
+        let isActive = true; 
+        console.log("[AdminReviewScreen] Fetching claims for admin review (Admin User ID: " + currentUser.id + ")");
         setIsLoading(true);
         try {
-            // TODO: This endpoint needs to be secured for ADMINS on the backend
             const response = await fetch(`${API_BASE_URL}/api/claims/admin-review`, {
-                // headers: { 'Authorization': `Bearer YOUR_ADMIN_TOKEN` } // Add if auth is implemented
+                // TODO: headers: { 'Authorization': `Bearer YOUR_ADMIN_TOKEN` } 
             });
+
+            if (!isActive) return;
+
             if (!response.ok) {
-                let errorMsg = "Failed to fetch claims for admin review.";
+                let errorMsg = `Failed to fetch claims (status: ${response.status})`;
                 try {
                     const errData = await response.json();
-                    errorMsg = errData.message || errData.error || `Failed to fetch claims (status: ${response.status})`;
+                    errorMsg = errData.error || errData.message || errorMsg;
                 } catch (e) {
-                    // If parsing error message fails, use the status text or a generic message
-                    errorMsg = response.statusText || `Server error: ${response.status}`;
+                    const textError = await response.text().catch(() => "Server returned an unreadable error or no content.");
+                    errorMsg = textError || errorMsg;
                 }
-                throw new Error(errorMsg);
+                console.error("Error fetching admin review claims - Response not OK:", errorMsg);
+                Alert.alert("Error Loading Claims", errorMsg);
+                if (isActive) setClaimsForReview([]);
+                return; 
             }
-            const data = await response.json();
-            setClaimsForReview(Array.isArray(data) ? data : []);
-            console.log(`[AdminReviewScreen] Fetched ${data.length} claims for review.`);
-        } catch (error) {
-            console.error("Error fetching admin review claims:", error);
-            Alert.alert("Error Loading Claims", error.message || "Could not load claims for review. Please ensure the backend is running and accessible.");
-            setClaimsForReview([]);
-        } finally {
-            setIsLoading(false);
-        }
-    }, []); // Empty dependency array as it doesn't depend on component state/props directly
 
-    // Corrected useFocusEffect pattern
+            const data = await response.json();
+            if (isActive) {
+                setClaimsForReview(Array.isArray(data) ? data : []);
+                console.log(`[AdminReviewScreen] Fetched ${Array.isArray(data) ? data.length : 0} claims for review.`);
+            }
+        } catch (error) {
+            console.error("Error fetching admin review claims (catch block):", error);
+            if (isActive) {
+                Alert.alert("Error Loading Claims", "Could not load claims for review. " + error.message);
+                setClaimsForReview([]);
+            }
+        } finally {
+            if (isActive) setIsLoading(false);
+        }
+    }, [currentUser]); 
+
     useFocusEffect(
         useCallback(() => {
-            let isActive = true;
-
-            async function fetchData() {
+            console.log("[AdminReviewScreen] useFocusEffect triggered.");
+            async function fetchDataOnFocus() {
                 await fetchAdminReviewClaims();
             }
-
-            fetchData();
-
-            return () => {
-                isActive = false; // Not strictly needed here as fetchAdminReviewClaims handles its own state
-            };
-        }, [fetchAdminReviewClaims]) // fetchAdminReviewClaims is memoized
+            fetchDataOnFocus(); 
+            return () => {}; 
+        }, [fetchAdminReviewClaims]) 
     );
 
-    const handleAdminAction = async (claimId, actionType) => {
+    const handleAdminAction = async (claimId, actionType, reason = null) => {
+        console.log("[AdminReviewScreen] handleAdminAction called with currentUser:", JSON.stringify(currentUser, null, 2));
         if (!currentUser || currentUser.role !== 'admin' || !currentUser.id) {
-            Alert.alert("Unauthorized", "Only admins can perform this action. Ensure you are logged in as an admin.");
+            Alert.alert("Unauthorized", "Only admins can perform this action. Ensure you are logged in as an admin and user data is loaded.");
             return;
         }
         const endpointAction = actionType === 'approve' ? 'approve' : 'reject';
         setActionLoading({ type: actionType, claimId });
 
-        let requestBody = { userId: currentUser.id }; // Admin's ID performing the action
-
-        if (actionType === 'reject') {
-            // Prompt for rejection reason
-            Alert.prompt("Reject Claim", "Admin: Optional reason for rejection.",
-                [
-                    { text: "Cancel", style: "cancel", onPress: () => setActionLoading({ type: null, claimId: null }) },
-                    {
-                        text: "Confirm Rejection",
-                        onPress: async (reason) => {
-                            requestBody.rejectionReason = reason || "Rejected by admin.";
-                            await performClaimAction(claimId, endpointAction, requestBody);
-                        }
-                    }
-                ],
-                "plain-text"
-            );
-        } else { // For approval
-            await performClaimAction(claimId, endpointAction, requestBody);
-        }
-    };
-
-    const performClaimAction = async (claimId, endpointAction, requestBody) => {
         try {
+            const bodyPayload = { 
+                userId: currentUser.id 
+            };
+            if (actionType === 'reject' && reason) {
+                bodyPayload.rejectionReason = reason;
+            }
+
             const response = await fetch(`${API_BASE_URL}/api/claims/${claimId}/${endpointAction}`, {
                 method: 'PUT',
-                headers: { 'Content-Type': 'application/json' /*, 'Authorization': `Bearer YOUR_ADMIN_TOKEN` */ },
-                body: JSON.stringify(requestBody)
+                headers: { 
+                    'Content-Type': 'application/json',
+                    // TODO: 'Authorization': `Bearer YOUR_ADMIN_TOKEN` 
+                },
+                body: JSON.stringify(bodyPayload)
             });
+
             const responseData = await response.json().catch(() => null);
+
             if (response.ok) {
-                Alert.alert(`Claim ${endpointAction === 'approve' ? 'Approved' : 'Rejected'}`, responseData?.message || `Claim ${claimId} has been ${endpointAction === 'approve' ? 'approved' : 'rejected'}.`);
-                fetchAdminReviewClaims(); // Refresh list
+                Alert.alert(
+                    `Claim ${actionType === 'approve' ? 'Approved' : 'Rejected'}`,
+                    responseData?.message || `Claim ${claimId} has been ${actionType === 'approve' ? 'approved' : 'rejected'}.`
+                );
+                fetchAdminReviewClaims(); 
             } else {
-                throw new Error(responseData?.error || responseData?.message || `Failed to ${endpointAction} claim.`);
+                throw new Error(responseData?.error || responseData?.message || `Failed to ${actionType} claim.`);
             }
         } catch (error) {
-            Alert.alert(`Error ${endpointAction === 'approve' ? 'Approving' : 'Rejecting'} Claim`, error.message);
+            Alert.alert(`Error ${actionType === 'approve' ? 'Approving' : 'Rejecting'} Claim`, error.message);
         } finally {
             setActionLoading({ type: null, claimId: null });
         }
+    };
+
+    const promptAndRejectClaim = (claimId) => {
+        Alert.prompt("Reject Claim", "Admin: Optional reason for rejection.",
+            [
+                { text: "Cancel", style: "cancel", onPress: () => {} },
+                { text: "Confirm Rejection", onPress: (reason) => handleAdminAction(claimId, 'reject', reason || "Rejected by admin.") }
+            ],
+            "plain-text"
+        );
     };
 
     const renderClaimItem = ({ item: claim }) => (
@@ -129,7 +156,7 @@ export default function AdminReviewScreen({ route, navigation }) { // Ensure cur
             <Card.Content>
                 <Title style={styles.cardTitle}><Text>Claim for Item ID: {claim.itemId}</Text></Title>
                 <Paragraph><Text>Claimant: {claim.username || 'N/A'} (User ID: {claim.userId})</Text></Paragraph>
-                <Paragraph style={styles.dateText}><Text>Date: {new Date(claim.claimDate).toLocaleString()}</Text></Paragraph>
+                <Paragraph style={styles.claimDate}><Text>Date: {new Date(claim.claimDate).toLocaleString()}</Text></Paragraph>
                 <Divider style={styles.divider} />
                 <Text style={styles.detailLabel}>Proof Description:</Text>
                 <Paragraph style={styles.descriptionText}>{claim.description}</Paragraph>
@@ -143,46 +170,67 @@ export default function AdminReviewScreen({ route, navigation }) { // Ensure cur
                 )}
                 <Chip 
                     icon="information-outline" 
-                    style={[styles.statusChip, {backgroundColor: claim.status === 'FORWARDED_TO_ADMIN' ? colors.tertiaryContainer : colors.surfaceVariant }]} 
+                    style={[styles.statusChipInternal, {backgroundColor: claim.status === 'FORWARDED_TO_ADMIN' ? colors.tertiaryContainer : colors.surfaceVariant }]} 
                     textStyle={{color: claim.status === 'FORWARDED_TO_ADMIN' ? colors.onTertiaryContainer : colors.onSurfaceVariant}}
                 >
                     <Text>Status: {claim.status}</Text>
                 </Chip>
             </Card.Content>
-            {/* Actions only if the claim is in a state an admin can act upon, e.g., FORWARDED_TO_ADMIN */}
             {claim.status === 'FORWARDED_TO_ADMIN' && (
                 <Card.Actions style={styles.actions}>
                     <Button 
                         mode="outlined" 
-                        onPress={() => handleAdminAction(claim.id, 'reject')} 
+                        onPress={() => promptAndRejectClaim(claim.id)} 
                         textColor={colors.error} 
                         style={[styles.actionButton, {borderColor: colors.error}]}
                         loading={actionLoading.type === 'reject' && actionLoading.claimId === claim.id}
-                        disabled={actionLoading.claimId !== null}
+                        disabled={actionLoading.claimId !== null && (actionLoading.claimId !== claim.id || actionLoading.type !== 'reject')}
                         icon="close-circle-outline"
+                        compact
                     ><Text>Reject</Text></Button>
                     <Button 
                         mode="contained" 
                         onPress={() => handleAdminAction(claim.id, 'approve')} 
                         style={[styles.actionButton, {backgroundColor: colors.primary}]}
                         loading={actionLoading.type === 'approve' && actionLoading.claimId === claim.id}
-                        disabled={actionLoading.claimId !== null}
+                        disabled={actionLoading.claimId !== null && (actionLoading.claimId !== claim.id || actionLoading.type !== 'approve')}
                         icon="check-circle-outline"
+                        compact
                     ><Text>Approve</Text></Button>
                 </Card.Actions>
             )}
         </Card>
     );
 
+    if (!currentUser || !currentUser.id) { 
+        console.log("[AdminReviewScreen] currentUser is null or has no id, showing loader/message.");
+        return (
+            <View style={styles.loaderContainer}>
+                <PaperActivityIndicator size="large" animating={true} />
+                <Text style={{marginTop:10, color: colors.onSurfaceVariant}}>Loading Admin Data...</Text>
+            </View>
+        );
+    }
+    if (currentUser.role !== 'admin') {
+        console.log("[AdminReviewScreen] currentUser is not admin. Role:", currentUser.role);
+         return (
+            <View style={styles.loaderContainer}>
+                <Icon name="alert-octagon-outline" size={48} color={colors.error} />
+                <Text style={{marginTop:10, color: colors.error, fontSize: 16, textAlign: 'center'}}>Access Denied. You do not have admin privileges.</Text>
+                 <Button onPress={() => navigation.canGoBack() ? navigation.goBack() : navigation.replace('Login')} style={{marginTop: 20}}><Text>Go Back</Text></Button>
+            </View>
+        );
+    }
+
     if (isLoading && claimsForReview.length === 0) {
-        return <View style={styles.loaderContainer}><PaperActivityIndicator size="large" animating={true} /><Text style={{marginTop:10, color: colors.onSurfaceVariant}}>Loading claims...</Text></View>;
+        return <View style={styles.loaderContainer}><PaperActivityIndicator size="large" animating={true} /><Text style={{marginTop:10, color: colors.onSurfaceVariant}}>Loading claims for review...</Text></View>;
     }
 
     return (
         <FlatList
             data={claimsForReview}
             renderItem={renderClaimItem}
-            keyExtractor={(item) => item.id.toString()}
+            keyExtractor={(claim) => claim.id.toString()}
             style={styles.container}
             contentContainerStyle={claimsForReview.length === 0 ? styles.emptyContainer : styles.listContentContainer}
             ListEmptyComponent={!isLoading ? (
@@ -198,99 +246,24 @@ export default function AdminReviewScreen({ route, navigation }) { // Ensure cur
     );
 }
 
+// --- Styles (Same as admin_review_screen_v2_fixes) ---
 const styles = StyleSheet.create({
-    container: { 
-        flex: 1, 
-        backgroundColor: '#f4f6f8', 
-    },
-    listContentContainer: { 
-        padding: 10, 
-    },
-    loaderContainer: { 
-        flex: 1, 
-        justifyContent: 'center', 
-        alignItems: 'center' 
-    },
-    claimCard: { 
-        marginVertical: 8, 
-        marginHorizontal:5, 
-        elevation: 3, 
-        borderRadius: 10 
-    },
-    cardTitle: {
-        fontSize: 17,
-        fontWeight: 'bold',
-        marginBottom: 5,
-    },
-    dateText: {
-        fontSize: 12,
-        color: '#6c757d',
-        marginBottom: 10,
-    },
-    divider: {
-        marginVertical: 8,
-    },
-    detailLabel: {
-        fontSize: 13,
-        fontWeight: 'bold',
-        color: '#495057',
-        marginTop: 8,
-    },
-    descriptionText: { 
-        marginVertical: 5, 
-        fontSize: 14,
-        lineHeight: 20,
-    },
-    proofImageContainer: {
-        marginTop: 10,
-    },
-    proofImageLabel: { 
-        fontWeight: 'bold', 
-        marginBottom: 5,
-        fontSize: 13,
-        color: '#495057',
-    },
-    proofImage: { 
-        width: '100%', 
-        height: 200, 
-        resizeMode: 'contain', 
-        marginTop: 5, 
-        borderRadius: 6, 
-        backgroundColor: '#f0f0f0',
-        borderWidth: 1,
-        borderColor: '#e0e0e0',
-    },
-    statusChip: { 
-        alignSelf: 'flex-start', 
-        marginTop: 12, 
-        paddingHorizontal: 8,
-    },
-    actions: { 
-        justifyContent: 'space-between', 
-        paddingTop: 12, 
-        paddingBottom: 8,
-        paddingHorizontal: 8,
-        borderTopWidth: 1, 
-        borderTopColor: '#f0f0f0' 
-    },
-    actionButton: {
-        flex: 1,
-        marginHorizontal: 4,
-        borderRadius: 20, // Pill shape
-    },
-    emptyContainer: { 
-        flexGrow: 1, 
-        justifyContent: 'center', 
-        alignItems: 'center', 
-        padding: 20 
-    },
-    emptyContainerContent: { 
-        alignItems: 'center'
-    },
-    emptyText: { 
-        marginTop: 16, 
-        fontSize: 16, 
-        color: '#6c757d', 
-        textAlign: 'center' 
-    },
+    container: { flex: 1, backgroundColor: '#f4f6f8', },
+    listContentContainer: { padding: 10, paddingBottom: 20, },
+    loaderContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
+    claimCard: { marginVertical: 8, marginHorizontal:5, elevation: 3, borderRadius: 10 },
+    cardTitle: { fontSize: 17, fontWeight: 'bold', marginBottom: 5, },
+    claimDate: { fontSize: 12, color: '#6c757d', marginBottom: 10, },
+    divider: { marginVertical: 8, },
+    detailLabel: { fontSize: 13, fontWeight: '600', color: '#495057', marginTop: 8, },
+    descriptionText: { marginVertical: 5, fontSize: 14, lineHeight: 20, },
+    proofImageContainer: { marginTop: 10, alignItems: 'center' },
+    proofImageLabel: { fontWeight: 'bold', marginBottom: 5, fontSize: 13, color: '#495057', alignSelf: 'flex-start' },
+    proofImage: { width: '100%', height: 200, resizeMode: 'contain', marginTop: 5, borderRadius: 6, backgroundColor: '#f0f0f0', borderWidth: 1, borderColor: '#e0e0e0', },
+    statusChipInternal: { alignSelf: 'flex-start', marginTop: 12, paddingHorizontal: 8, },
+    actions: { justifyContent: 'space-between', paddingTop: 12, paddingBottom: 8, paddingHorizontal: 8, borderTopWidth: 1, borderTopColor: '#f0f0f0' },
+    actionButton: { flex: 1, marginHorizontal: 4, },
+    emptyContainer: { flexGrow: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
+    emptyContainerContent: { alignItems: 'center'},
+    emptyText: { marginTop: 16, fontSize: 16, color: '#6c757d', textAlign: 'center' },
 });

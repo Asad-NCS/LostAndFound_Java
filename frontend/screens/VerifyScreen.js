@@ -3,7 +3,7 @@ import { Alert, StyleSheet, View } from 'react-native';
 import { Button, Text, TextInput, useTheme } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
-const API_BASE_URL = 'http://10.7.41.147:8080';
+const API_BASE_URL = 'http://10.7.41.239:8080';
 
 export default function VerifyScreen({ route, navigation }) {
   // Assuming email is passed if verification is email-based

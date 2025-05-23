@@ -4,7 +4,7 @@ import { Alert, FlatList, Image, StyleSheet, Text, TouchableOpacity, View } from
 import { Button, Card, Chip, ActivityIndicator as PaperActivityIndicator, Searchbar, Title, useTheme } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
-const API_BASE_URL = 'http://10.7.41.147:8080';
+const API_BASE_URL = 'http://10.7.41.239:8080';
 
 export default function ItemListScreen({ navigation, route }) { // Added route to get currentUser
   const currentUser = route.params?.currentUser; // <<< RECEIVE currentUser from HomeScreen

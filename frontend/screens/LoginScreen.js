@@ -3,8 +3,7 @@ import { Alert, Image, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Button, ActivityIndicator as PaperActivityIndicator, Text, TextInput, useTheme } from 'react-native-paper';
 import logoImage from '../assets/images/react-logo.png'; // Ensure this path is correct
 
-// Ensure this IP is correct and your backend is running there
-const API_BASE_URL = 'http://10.7.41.147:8080'; // Or your current IP
+const API_BASE_URL = 'http://10.7.41.239:8080'; // Or your current IP
 
 const LoginScreen = ({ navigation, setUser }) => { // setUser is the updateUser function from App.js
   const [email, setEmail] = useState('');

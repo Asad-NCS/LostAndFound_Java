@@ -1,22 +1,22 @@
 import { useState } from 'react';
 import {
-    Alert,
-    ScrollView,
-    StyleSheet,
-    TouchableOpacity,
-    View
+  Alert,
+  ScrollView,
+  StyleSheet,
+  TouchableOpacity,
+  View
 } from 'react-native';
 import {
-    Button,
-    ActivityIndicator as PaperActivityIndicator,
-    SegmentedButtons,
-    Text,
-    TextInput,
-    useTheme,
+  Button,
+  ActivityIndicator as PaperActivityIndicator,
+  SegmentedButtons,
+  Text,
+  TextInput,
+  useTheme,
 } from 'react-native-paper';
 import Icon from 'react-native-vector-icons/MaterialCommunityIcons';
 
-const API_BASE_URL = 'http://10.7.41.147:8080'; // Ensure this is your correct IP
+const API_BASE_URL = 'http://10.7.41.239:8080'; // Ensure this is your correct IP
 
 export default function SignupScreen({ navigation }) {
   const [email, setEmail] = useState('');
