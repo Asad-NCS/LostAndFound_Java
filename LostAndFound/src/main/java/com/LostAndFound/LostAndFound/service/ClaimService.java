@@ -170,44 +170,61 @@ public class ClaimService {
     public ClaimDTO getClaimById(Long id) {
         return claimRepository.findById(id).map(this::convertToDTO).orElseThrow(() -> new RuntimeException("Claim not found with ID: " + id));
     }
+
     public List<ClaimDTO> getAllClaims() {
         return claimRepository.findAll().stream().map(this::convertToDTO).collect(Collectors.toList());
     }
+
     public List<ClaimDTO> getClaimsByItemId(Long itemId) {
         return claimRepository.findByItemId(itemId).stream().map(this::convertToDTO).collect(Collectors.toList());
     }
+
     public List<ClaimDTO> getClaimsByUserId(Long userId) {
         return claimRepository.findByUserId(userId).stream().map(this::convertToDTO).collect(Collectors.toList());
     }
+
     @Transactional
     public ClaimDTO updateClaim(Long claimId, ClaimDTO claimDTO, Long currentUserId) {
         Claim claim = claimRepository.findById(claimId).orElseThrow(() -> new RuntimeException("Claim not found with ID: " + claimId));
-        if (!claim.getUser().getId().equals(currentUserId)) { throw new SecurityException("You are not authorized to update this claim."); }
-        if (claim.getStatus() != ClaimStatus.PENDING) { throw new IllegalStateException("Only pending claims can be updated. Current status: " + claim.getStatus());}
-        if (claimDTO.getDescription() != null && !claimDTO.getDescription().isBlank()) claim.setDescription(claimDTO.getDescription());
+        if (!claim.getUser().getId().equals(currentUserId)) {
+            throw new SecurityException("You are not authorized to update this claim.");
+        }
+        if (claim.getStatus() != ClaimStatus.PENDING) {
+            throw new IllegalStateException("Only pending claims can be updated. Current status: " + claim.getStatus());
+        }
+        if (claimDTO.getDescription() != null && !claimDTO.getDescription().isBlank())
+            claim.setDescription(claimDTO.getDescription());
         if (claimDTO.getProofImagePath() != null) claim.setProofImagePath(claimDTO.getProofImagePath());
         return convertToDTO(claimRepository.save(claim));
     }
+
     @Transactional
     public void deleteClaim(Long id, Long currentUserId, String userRole) {
         Claim claim = claimRepository.findById(id).orElseThrow(() -> new RuntimeException("Claim not found: " + id));
         boolean isAdmin = "admin".equalsIgnoreCase(userRole);
         boolean isClaimOwner = claim.getUser().getId().equals(currentUserId);
         if (!isClaimOwner && !isAdmin) throw new SecurityException("You are not authorized to delete this claim.");
-        if (claim.getStatus() == ClaimStatus.APPROVED && !isAdmin) throw new IllegalStateException("Cannot delete an approved claim. Contact an administrator.");
+        if (claim.getStatus() == ClaimStatus.APPROVED && !isAdmin)
+            throw new IllegalStateException("Cannot delete an approved claim. Contact an administrator.");
         if (claim.getStatus() != ClaimStatus.PENDING && !isAdmin && claim.getStatus() != ClaimStatus.FORWARDED_TO_ADMIN) { // Admin might delete forwarded claims
             throw new IllegalStateException("Only pending or forwarded claims can be deleted by the claim owner/admin in this flow.");
         }
         if (isAdmin && claim.getStatus() == ClaimStatus.APPROVED && claim.getItem() != null && claim.getItem().isClaimed()) {
-            Item item = claim.getItem(); item.setClaimed(false); item.setClaimedByUser(null); item.setClaimedDate(null); itemRepository.save(item);
+            Item item = claim.getItem();
+            item.setClaimed(false);
+            item.setClaimedByUser(null);
+            item.setClaimedDate(null);
+            itemRepository.save(item);
         }
         claimRepository.deleteById(id);
         log.info("Deleted claim ID: {} by User ID: {} (Role: {})", id, currentUserId, userRole);
     }
+
     public List<ClaimDTO> getClaimsForAdminReview() {
         log.info("Fetching claims with status FORWARDED_TO_ADMIN for admin review.");
         return claimRepository.findByStatus(ClaimStatus.FORWARDED_TO_ADMIN).stream().map(this::convertToDTO).collect(Collectors.toList());
     }
+
     private ClaimDTO convertToDTO(Claim claim) {
         return ClaimDTO.builder().id(claim.getId()).description(claim.getDescription()).proofImagePath(claim.getProofImagePath()).status(claim.getStatus()).claimDate(claim.getClaimDate()).userId(claim.getUser() != null ? claim.getUser().getId() : null).username(claim.getUser() != null ? claim.getUser().getUsername() : "N/A").itemId(claim.getItem() != null ? claim.getItem().getId() : null).build();
     }
